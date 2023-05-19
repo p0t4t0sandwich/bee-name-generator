@@ -5,3 +5,4 @@ Dockerfile
 .dockerignore
 docker-compose.yml
 .github
+names
