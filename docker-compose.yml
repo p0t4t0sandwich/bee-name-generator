@@ -1,0 +1,15 @@
+---
+version: "3.8"
+services:
+  bee-name-generator:
+    image: p0t4t0sandwich/bee-name-generator:latest
+    container_name: bee-name-generator
+    environment:
+      - TZ=UTC
+      - DISCORD_TOKEN=
+      - DISCORD_CLIENT_ID=
+      - MONGODB_URI=
+      - MONGODB_DB=
+    ports:
+      - "0.0.0.0:3001:3001"
+    restart: unless-stopped
