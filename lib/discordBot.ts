@@ -349,10 +349,10 @@ export class DiscordBot {
                                 }
                                 break;
                             }
+                        break;
 
                 // Other subcommand groups
                 default:
-                    console.log("boop");
                     switch (subcommand) {
                         // Get a random bee name
                         case 'get':
