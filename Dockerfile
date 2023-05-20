@@ -2,13 +2,17 @@ FROM node:18
 
 WORKDIR /app
 
+COPY README.md ./
+
+COPY LICENCE ./
+
 COPY package.json ./
 
 COPY package-lock.json ./
 
 RUN npm ci
 
-COPY ./localizations ./localizations
+COPY ./localization ./localization
 
 COPY ./lib ./lib
 

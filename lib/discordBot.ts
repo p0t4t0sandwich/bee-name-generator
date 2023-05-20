@@ -1,10 +1,9 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Collection, ComponentBuilder, Events, GatewayIntentBits, Message, REST, Routes, SlashCommandBuilder } from 'discord.js';
 
 
-const DOMAIN: string = <string>process.env.DOMAIN || "http://localhost:3001";
-const ROOT_ENDPOINT: string = "";//<string>process.env.ROOT_ENDPOINT || "/api/v1/bee-name";
-const AUTH_TOKEN: string = <string>process.env.AUTH_TOKEN || "1234567890";
+import { DOMAIN, ROOT_ENDPOINT, AUTH_TOKEN } from "./webServer.js";
 const DISCORD_ADMIN_IDS: string[] = process.env.DISCORD_ADMIN_IDS.split(",");
+import commandLocales from '../localization/commands.json' assert { type: "json" };
 
 
 interface BeeAPIResponse<T> {
@@ -244,37 +243,53 @@ export class DiscordBot {
         const bee_name_command = {
             data: new SlashCommandBuilder()
                 .setName('bee_name')
+                .setNameLocalizations(commandLocales.bee_name.name)
                 .setDescription('Get a random bee name')
+                .setDescriptionLocalizations(commandLocales.bee_name.description)
                 .setDefaultMemberPermissions(0)
                 .setDMPermission(true)
                 .addSubcommand(subcommand =>
                     subcommand.setName('get')
+                        .setNameLocalizations(commandLocales.bee_name.get.name)
                         .setDescription('Get a random bee name')
+                        .setDescriptionLocalizations(commandLocales.bee_name.description)
                 )
                 .addSubcommand(subcommand =>
                     subcommand.setName('upload')
+                        .setNameLocalizations(commandLocales.bee_name.upload.name)
                         .setDescription('Upload a bee name')
+                        .setDescriptionLocalizations(commandLocales.bee_name.upload.description)
                         .addStringOption(option =>
                             option.setName('name')
+                                .setNameLocalizations(commandLocales.bee_name.global.variable.name.name)
                                 .setDescription('The bee name to upload')
+                                .setDescriptionLocalizations(commandLocales.bee_name.global.variable.name.description)
                                 .setRequired(true)
                         )
                 )
                 .addSubcommandGroup(subcommandGroup =>
                     subcommandGroup.setName('suggestion')
-                        .setDescription('Submit a bee name suggestion')
+                        .setNameLocalizations(commandLocales.bee_name.suggestion.name)
+                        .setDescription('Bee name suggestions')
+                        .setDescriptionLocalizations(commandLocales.bee_name.suggestion.description)
                         .addSubcommand(subcommand =>
                             subcommand.setName('submit')
+                                .setNameLocalizations(commandLocales.bee_name.suggestion.submit.name)
                                 .setDescription('Submit a bee name suggestion')
+                                .setDescriptionLocalizations(commandLocales.bee_name.suggestion.submit.description)
                                 .addStringOption(option =>
                                     option.setName('name')
+                                        .setNameLocalizations(commandLocales.bee_name.global.variable.name.name)
                                         .setDescription('The bee name to submit')
+                                        .setDescriptionLocalizations(commandLocales.bee_name.global.variable.name.description)
                                         .setRequired(true)
                                 )
                         )
                         .addSubcommand(subcommand =>
                             subcommand.setName('get')
+                                .setNameLocalizations(commandLocales.bee_name.get.name)
                                 .setDescription('Get a bee name suggestion')
+                                .setDescriptionLocalizations(commandLocales.bee_name.description)
                         )
                 ),
             async execute(interaction: any) {
@@ -284,9 +299,13 @@ export class DiscordBot {
                 const subcommandGroup = interaction.options.getSubcommandGroup();
                 const subcommand = interaction.options.getSubcommand();
 
-                _this.logger("discord", interaction.guild.id, discordID, interaction.commandName);
+                _this.logger("discord", interaction.guild.id, discordID, interaction.commandName + " " + subcommandGroup + " " + subcommand);
 
-                const embed = { color: 0xbf0f0f, description: "An unknown error occurred." };
+                const embed = {
+                    color: 0xbf0f0f,
+                    title: "Bee Name Generator",
+                    description: "An unknown error occurred."
+                };
                 let buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
                 let beeName: BeeAPIResponse<any>;
 
@@ -299,9 +318,11 @@ export class DiscordBot {
                                 beeName = await _this.submitBeeNameSuggestionCall(interaction.options.getString('name'));
                                 if (beeName.success === false) {
                                     embed.color = 0xbf0f0f;
+                                    embed.title = "Error Submitting Bee Name Suggestion";
                                     embed.description = beeName.error;
                                 } else {
                                     embed.color = 0x65bf65;
+                                    embed.title = "Bee Name Suggestion Submitted";
                                     embed.description = beeName.data;
                                 }
                                 break;
@@ -312,9 +333,11 @@ export class DiscordBot {
                                     beeName = await _this.getBeeNameSuggestionsCall();
                                     if (beeName.success === false) {
                                         embed.color = 0xbf0f0f;
+                                        embed.title = "Error Getting Bee Name Suggestions";
                                         embed.description = beeName.error;
                                     } else {
                                         embed.color = 0x65bf65;
+                                        embed.title = "Bee Name Suggestions";
                                         embed.description = beeName.data.join("\n");
                                     }
 
@@ -325,70 +348,77 @@ export class DiscordBot {
                                     embed.description = "You do not have permission to use this command.";
                                 }
                                 break;
+                            }
 
-                    // Other subcommand groups
-                    default:
-                        switch (subcommand) {
-                            // Get a random bee name
-                            case 'get':
-                                beeName = await _this.getBeeNameCall();
+                // Other subcommand groups
+                default:
+                    console.log("boop");
+                    switch (subcommand) {
+                        // Get a random bee name
+                        case 'get':
+                            beeName = await _this.getBeeNameCall();
+                            if (beeName.success === false) {
+                                embed.color = 0xbf0f0f;
+                                embed.title = "Error Getting Bee Name";
+                                embed.description = beeName.error;
+                            } else {
+                                embed.color = 0x65bf65;
+                                embed.title = "Bee Name";
+                                embed.description = beeName.data;
+                            }
+                            break;
+
+                        // Upload a bee name
+                        case 'upload':
+                            if (DISCORD_ADMIN_IDS.includes(discordID)) {
+                                const name = interaction.options.getString('name');
+                                const beeName = await _this.uploadBeeNameCall(name);
                                 if (beeName.success === false) {
                                     embed.color = 0xbf0f0f;
+                                    embed.title = "Error Uploading Bee Name";
                                     embed.description = beeName.error;
-                                } else {
+                                }
+                                else {
                                     embed.color = 0x65bf65;
+                                    embed.title = "Bee Name Uploaded";
                                     embed.description = beeName.data;
                                 }
-                                break;
-
-                            // Upload a bee name
-                            case 'upload':
-                                if (DISCORD_ADMIN_IDS.includes(discordID)) {
-                                    const name = interaction.options.getString('name');
-                                    const beeName = await _this.uploadBeeNameCall(name);
-                                    if (beeName.success === false) {
-                                        embed.color = 0xbf0f0f;
-                                        embed.description = beeName.error;
-                                    }
-                                    else {
-                                        embed.color = 0x65bf65;
-                                        embed.description = beeName.data;
-                                    }
-                                } else {
-                                    embed.color = 0xbf0f0f;
-                                    embed.description = "You do not have permission to use this command.";
-                                }
-                                break;
-
-                            // Delete a bee name
-                            case 'delete':
-                                if (DISCORD_ADMIN_IDS.includes(discordID)) {
-                                    const name = interaction.options.getString('name');
-                                    const beeName = await _this.deleteBeeNameCall(name);
-                                    if (beeName.success === false) {
-                                        embed.color = 0xbf0f0f;
-                                        embed.description = beeName.error;
-                                    }
-                                    else {
-                                        embed.color = 0x65bf65;
-                                        embed.description = beeName.data;
-                                    }
-                                } else {
-                                    embed.color = 0xbf0f0f;
-                                    embed.description = "You do not have permission to use this command.";
-                                }
-                                break;
-
-                            default:
+                            } else {
                                 embed.color = 0xbf0f0f;
-                                embed.description = "An unknown error occurred.";
-                                break;
-                        }
-                        break;
+                                embed.description = "You do not have permission to use this command.";
+                            }
+                            break;
+
+                        // Delete a bee name
+                        case 'delete':
+                            if (DISCORD_ADMIN_IDS.includes(discordID)) {
+                                const name = interaction.options.getString('name');
+                                const beeName = await _this.deleteBeeNameCall(name);
+                                if (beeName.success === false) {
+                                    embed.color = 0xbf0f0f;
+                                    embed.title = "Error Deleting Bee Name";
+                                    embed.description = beeName.error;
+                                }
+                                else {
+                                    embed.color = 0x65bf65;
+                                    embed.title = "Bee Name Deleted";
+                                    embed.description = beeName.data;
+                                }
+                            } else {
+                                embed.color = 0xbf0f0f;
+                                embed.description = "You do not have permission to use this command.";
+                            }
+                            break;
+
+                        default:
+                            embed.color = 0xbf0f0f;
+                            embed.description = "An unknown error occurred.";
+                            break;
                     }
+                    break;
                 }
 
-                _this.logger("discord", guildID, _this.clientId, embed.description);
+                _this.logger("discord", guildID, _this.clientId, embed.title + " " + embed.description);
 
                 if (buttonRow.components.length > 0) {
                     await interaction.editReply({ embeds: [embed], components: [buttonRow] });
@@ -447,7 +477,11 @@ export class DiscordBot {
 
                     _this.logger("discord", guildID, discordID, interaction.customId);
 
-                    const embed = { color: 0xbf0f0f, description: "An unknown error occurred." };
+                    const embed = {
+                        color: 0xbf0f0f,
+                        title: "Bee Name Suggestions",
+                        description: "An unknown error occurred."
+                    };
 
                     switch (interaction.customId) {
                         // Accept a bee name suggestion
@@ -491,9 +525,9 @@ export class DiscordBot {
                             embed.color = 0xbf0f0f;
                             embed.description = "An unknown error occurred.";
                             break;
-                        }
+                    }
 
-                    _this.logger("discord", guildID, _this.clientId, embed.description);
+                    _this.logger("discord", guildID, _this.clientId, embed.title + " " + embed.description);
 
                     let buttonRow: ActionRowBuilder<ButtonBuilder> = _this.getButtonComponents();
 

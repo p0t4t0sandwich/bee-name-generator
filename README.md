@@ -17,6 +17,8 @@ A bee-themed name generator for various uses.
 
 ## API Usage
 
+I'm running this api myself here: <https://api.sperrer.ca/api/v1/bee-name-generator>
+
 ### Get a bee name
 
 GET `/name`

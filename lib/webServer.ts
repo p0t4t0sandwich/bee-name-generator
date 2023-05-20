@@ -5,15 +5,23 @@ import { Db } from "mongodb";
 
 import { DatabaseHandler } from "./databaseHandler.js";
 
+function generateToken(): string {
+    const chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let token: string = "";
+    for (let i = 0; i < 32; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+}
 
-const DOMAIN: string = <string>process.env.DOMAIN || "http://localhost:3001";
-const ROOT_ENDPOINT: string = <string>process.env.ROOT_ENDPOINT || "/api/v1/bee-name";
-const AUTH_TOKEN: string = <string>process.env.AUTH_TOKEN || "1234567890";
+export const DOMAIN: string = <string>process.env.DOMAIN || "https://api.sperrer.ca";
+export const ROOT_ENDPOINT: string = <string>process.env.ROOT_ENDPOINT || "/api/v1/bee-name-generator";
+export const AUTH_TOKEN: string = <string>process.env.AUTH_TOKEN || generateToken();
 
 
 export class WebServer {
     // Properties
-    private port: number = <number><unknown>process.env.REST_PORT || 3001;
+    private port: number = <number><unknown>process.env.REST_PORT || 3002;
     private db: DatabaseHandler;
 
     // Constructor

@@ -6,10 +6,15 @@ services:
     container_name: bee-name-generator
     environment:
       - TZ=UTC
-      - DISCORD_TOKEN=
-      - DISCORD_CLIENT_ID=
-      - MONGODB_URI=
-      - MONGODB_DB=
+      - DISCORD_TOKEN=           # Discord bot token
+      - DISCORD_CLIENT_ID=       # Used to update slash commands
+      - DISCORD_ADMIN_IDS=       # Comma separated list of admin ids
+      - REST_PORT=               # Port to listen on
+      - MONGODB_URI=             # MongoDB connection string
+      - MONGODB_DB=              # MongoDB database name
+      - DOMAIN=                  # Domain name for the REST API
+      - ROOT_ENDPOINT=           # Root endpoint for the REST API
+      - AUTH_TOKEN=              # Auth token for the REST API
     ports:
-      - "0.0.0.0:3001:3001"
+      - "0.0.0.0:3002:3002"
     restart: unless-stopped
