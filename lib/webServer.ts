@@ -69,7 +69,7 @@ export class WebServer {
                     <p>Accept a bee name suggestion (Authentication Required): </p>
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">PUT ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
                     <br>
-                    <p>Reject a bee name suggestion: </p>
+                    <p>Reject a bee name suggestion (Authentication Required): </p>
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">DELETE ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
                 </body>
                 </html>
