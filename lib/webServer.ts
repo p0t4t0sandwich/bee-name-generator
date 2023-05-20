@@ -13,7 +13,7 @@ const AUTH_TOKEN: string = <string>process.env.AUTH_TOKEN || "1234567890";
 
 export class WebServer {
     // Properties
-    private port: number = <number><unknown>process.env.PORT || 3001;
+    private port: number = <number><unknown>process.env.REST_PORT || 3001;
     private db: DatabaseHandler;
 
     // Constructor
@@ -42,14 +42,16 @@ export class WebServer {
                 </head>
                 <body>
                     <h1>Bee Name Generator</h1>
+                    <a href="https://github.com/p0t4t0sandwich/bee-name-generator">GitHub Repository</a>
+                    <br>
                     <p>Get a bee name: </p>
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/name">GET ${DOMAIN}${ROOT_ENDPOINT}/name</a>
                     <br>
                     <p>Upload a bee name (Authentication Required): </p>
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/name">POST ${DOMAIN}${ROOT_ENDPOINT}/name</a>
                     <br>
-                    <p>Submit a bee name: </p>
-                    <form action="${DOMAIN}${ROOT_ENDPOINT}/submit" method="post">
+                    <p>Submit a bee name (it can make sense, or you can be punny with it): </p>
+                    <form action="${DOMAIN}${ROOT_ENDPOINT}/suggestion" method="post">
                         <input type="text" name="name" placeholder="Bee Name">
                         <input type="submit" value="Submit">
                     </form>
@@ -57,7 +59,7 @@ export class WebServer {
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">GET ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
                     <br>
                     <p>Accept a bee name suggestion (Authentication Required): </p>
-                    <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">POST ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
+                    <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">PUT ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
                     <br>
                     <p>Reject a bee name suggestion: </p>
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">DELETE ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
@@ -374,16 +376,16 @@ export class WebServer {
         router.delete("/name/:name", this.deleteBeeNameRoute.bind(this));
 
         // Submit a bee name
-        router.post("/submit", this.submitBeeNameRoute.bind(this));
-        router.post("/submit/:name", this.submitBeeNameRoute.bind(this));
+        router.post("/suggestion", this.submitBeeNameRoute.bind(this));
+        router.post("/suggestion/:name", this.submitBeeNameRoute.bind(this));
 
         // Get bee name suggestions
         router.get("/suggestion", this.getBeeNameSuggestionsRoute.bind(this));
         router.get("/suggestion/:amount", this.getBeeNameSuggestionsRoute.bind(this));
 
         // Accept a bee name suggestion
-        router.post("/suggestion", this.acceptBeeNameSuggestionRoute.bind(this));
-        router.post("/suggestion/:name", this.acceptBeeNameSuggestionRoute.bind(this));
+        router.put("/suggestion", this.acceptBeeNameSuggestionRoute.bind(this));
+        router.put("/suggestion/:name", this.acceptBeeNameSuggestionRoute.bind(this));
 
         // Reject a bee name suggestion
         router.delete("/suggestion", this.rejectBeeNameSuggestionRoute.bind(this));

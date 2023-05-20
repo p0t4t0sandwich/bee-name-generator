@@ -1,10 +1,10 @@
-import { Client, Collection, Events, GatewayIntentBits, Message, REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Collection, ComponentBuilder, Events, GatewayIntentBits, Message, REST, Routes, SlashCommandBuilder } from 'discord.js';
 
 
 const DOMAIN: string = <string>process.env.DOMAIN || "http://localhost:3001";
 const ROOT_ENDPOINT: string = "";//<string>process.env.ROOT_ENDPOINT || "/api/v1/bee-name";
 const AUTH_TOKEN: string = <string>process.env.AUTH_TOKEN || "1234567890";
-const ADMIN_IDS: string[] = process.env.ADMIN_IDS.split(",");
+const DISCORD_ADMIN_IDS: string[] = process.env.DISCORD_ADMIN_IDS.split(",");
 
 
 interface BeeAPIResponse<T> {
@@ -114,10 +114,10 @@ export class DiscordBot {
     async submitBeeNameSuggestionCall(beeName: string): Promise<BeeAPIResponse<string>> {
         try {
             // Submit the bee name suggestion
-            const response = await fetch(`${DOMAIN}${ROOT_ENDPOINT}/suggestion`, {
+            const response = await fetch(`${DOMAIN}${ROOT_ENDPOINT}/submit`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ name: beeName }),
             });
@@ -216,11 +216,32 @@ export class DiscordBot {
         }
     }
 
+    // Get button components
+    getButtonComponents(): ActionRowBuilder<ButtonBuilder> {
+        const acceptButton = new ButtonBuilder()
+            .setCustomId("bee_name_accept")
+            .setLabel("Accept")
+            .setStyle(ButtonStyle.Success);
+        const rejectButton = new ButtonBuilder()
+            .setCustomId("bee_name_reject")
+            .setLabel("Reject")
+            .setStyle(ButtonStyle.Danger);
+        const nextButton = new ButtonBuilder()
+            .setCustomId("bee_name_next")
+            .setLabel("Next")
+            .setStyle(ButtonStyle.Primary);
+
+        const buttonRow = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(acceptButton, rejectButton, nextButton);
+
+        return buttonRow;
+    }
+
 
     async start() {
         const _this = this;
 
-        const bee_name = {
+        const bee_name_command = {
             data: new SlashCommandBuilder()
                 .setName('bee_name')
                 .setDescription('Get a random bee name')
@@ -252,26 +273,8 @@ export class DiscordBot {
                                 )
                         )
                         .addSubcommand(subcommand =>
-                            subcommand.setName('list')
-                                .setDescription('List all bee name suggestions')
-                        )
-                        .addSubcommand(subcommand =>
-                            subcommand.setName('accept')
-                                .setDescription('Accept a bee name suggestion')
-                                .addStringOption(option =>
-                                    option.setName('name')
-                                        .setDescription('The bee name to accept')
-                                        .setRequired(true)
-                                )
-                        )
-                        .addSubcommand(subcommand =>
-                            subcommand.setName('reject')
-                                .setDescription('Reject a bee name suggestion')
-                                .addStringOption(option =>
-                                    option.setName('name')
-                                        .setDescription('The bee name to reject')
-                                        .setRequired(true)
-                                )
+                            subcommand.setName('get')
+                                .setDescription('Get a bee name suggestion')
                         )
                 ),
             async execute(interaction: any) {
@@ -281,71 +284,47 @@ export class DiscordBot {
                 const subcommandGroup = interaction.options.getSubcommandGroup();
                 const subcommand = interaction.options.getSubcommand();
 
+                _this.logger("discord", interaction.guild.id, discordID, interaction.commandName);
+
                 const embed = { color: 0xbf0f0f, description: "An unknown error occurred." };
-                let beeName;
+                let buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
+                let beeName: BeeAPIResponse<any>;
+
                 switch (subcommandGroup) {
                     // Bee name suggestions
-                    case 'submit':
-                        beeName = await _this.submitBeeNameSuggestionCall(interaction.options.getString('name'));
-                        if (beeName.success === false) {
-                            embed.color = 0xbf0f0f;
-                            embed.description = beeName.error;
-                        } else {
-                            embed.color = 0x65bf65;
-                            embed.description = beeName.data;
-                        }
-                        break;
+                    case "suggestion":
+                        switch (subcommand) {
+                            // Bee name suggestions
+                            case 'submit':
+                                beeName = await _this.submitBeeNameSuggestionCall(interaction.options.getString('name'));
+                                if (beeName.success === false) {
+                                    embed.color = 0xbf0f0f;
+                                    embed.description = beeName.error;
+                                } else {
+                                    embed.color = 0x65bf65;
+                                    embed.description = beeName.data;
+                                }
+                                break;
 
-                    // Bee name suggestions
-                    case 'list':
-                        if (ADMIN_IDS.includes(discordID)) {
-                            beeName = await _this.getBeeNameSuggestionsCall();
-                            if (beeName.success === false) {
-                                embed.color = 0xbf0f0f;
-                                embed.description = beeName.error;
-                            } else {
-                                embed.color = 0x65bf65;
-                                embed.description = beeName.data.join("\n");
-                            }
-                        } else {
-                            embed.color = 0xbf0f0f;
-                            embed.description = "You do not have permission to use this command.";
-                        }
-                        break;
+                            // Bee name suggestions
+                            case 'get':
+                                if (DISCORD_ADMIN_IDS.includes(discordID)) {
+                                    beeName = await _this.getBeeNameSuggestionsCall();
+                                    if (beeName.success === false) {
+                                        embed.color = 0xbf0f0f;
+                                        embed.description = beeName.error;
+                                    } else {
+                                        embed.color = 0x65bf65;
+                                        embed.description = beeName.data.join("\n");
+                                    }
 
-                    // Accept a bee name suggestion
-                    case 'accept':
-                        if (ADMIN_IDS.includes(discordID)) {
-                            beeName = await _this.acceptBeeNameSuggestionCall(interaction.options.getString('name'));
-                            if (beeName.success === false) {
-                                embed.color = 0xbf0f0f;
-                                embed.description = beeName.error;
-                            } else {
-                                embed.color = 0x65bf65;
-                                embed.description = beeName.data;
-                            }
-                        } else {
-                            embed.color = 0xbf0f0f;
-                            embed.description = "You do not have permission to use this command.";
-                        }
-                        break;
-                        
-                    // Reject a bee name suggestion
-                    case 'reject':
-                        if (ADMIN_IDS.includes(discordID)) {
-                            beeName = await _this.rejectBeeNameSuggestionCall(interaction.options.getString('name'));
-                            if (beeName.success === false) {
-                                embed.color = 0xbf0f0f;
-                                embed.description = beeName.error;
-                            } else {
-                                embed.color = 0x65bf65;
-                                embed.description = beeName.data;
-                            }
-                        } else {
-                            embed.color = 0xbf0f0f;
-                            embed.description = "You do not have permission to use this command.";
-                        }
-                        break;
+                                    buttonRow = _this.getButtonComponents();
+
+                                } else {
+                                    embed.color = 0xbf0f0f;
+                                    embed.description = "You do not have permission to use this command.";
+                                }
+                                break;
 
                     // Other subcommand groups
                     default:
@@ -364,7 +343,7 @@ export class DiscordBot {
 
                             // Upload a bee name
                             case 'upload':
-                                if (ADMIN_IDS.includes(discordID)) {
+                                if (DISCORD_ADMIN_IDS.includes(discordID)) {
                                     const name = interaction.options.getString('name');
                                     const beeName = await _this.uploadBeeNameCall(name);
                                     if (beeName.success === false) {
@@ -383,7 +362,7 @@ export class DiscordBot {
 
                             // Delete a bee name
                             case 'delete':
-                                if (ADMIN_IDS.includes(discordID)) {
+                                if (DISCORD_ADMIN_IDS.includes(discordID)) {
                                     const name = interaction.options.getString('name');
                                     const beeName = await _this.deleteBeeNameCall(name);
                                     if (beeName.success === false) {
@@ -406,10 +385,16 @@ export class DiscordBot {
                                 break;
                         }
                         break;
+                    }
                 }
 
                 _this.logger("discord", guildID, _this.clientId, embed.description);
-                interaction.editReply({ embeds: [embed] });
+
+                if (buttonRow.components.length > 0) {
+                    await interaction.editReply({ embeds: [embed], components: [buttonRow] });
+                } else {
+                    await interaction.editReply({ embeds: [embed] });
+                }
             }
         };
 
@@ -423,27 +408,98 @@ export class DiscordBot {
         // Set up slash commands
         const commands = [];
         client.commands = new Collection();
-        client.commands.set(bee_name.data.name, bee_name);
-        commands.push(bee_name.data.toJSON());
+        client.commands.set(bee_name_command.data.name, bee_name_command);
+        commands.push(bee_name_command.data.toJSON());
 
         const rest = new REST({ version: '10' }).setToken(this.token);
 
+        // Handle events
         client.on(Events.InteractionCreate, async interaction => {
             try {
-                if (!interaction.isChatInputCommand()) return;
+                // Handle slash commands
+                if (interaction.isChatInputCommand()) {
+                    const command = (<CustomClient>interaction.client).commands.get(interaction.commandName);
 
-                const command = (<CustomClient>interaction.client).commands.get(interaction.commandName);
+                    if (!command) {
+                        console.error(`No command matching ${interaction.commandName} was found.`);
+                        return;
+                    }
 
-                if (!command) {
-                    console.error(`No command matching ${interaction.commandName} was found.`);
-                    return;
-                }
+                    try {
+                        await command.execute(interaction);
+                    } catch (error) {
+                        console.error(error);
+                        await interaction.editReply({ content: 'There was an error while executing this command!' });
+                    }
 
-                try {
-                    await command.execute(interaction);
-                } catch (error) {
-                    console.error(error);
-                    await interaction.editReply({ content: 'There was an error while executing this command!' });
+                // Handle button clicks
+                } else if (interaction.isButton()) {
+                    await interaction.deferUpdate();
+
+                    if (DISCORD_ADMIN_IDS.includes(interaction.user.id) === false) {
+                        await interaction.editReply({ content: "You do not have permission to use this." });
+                        return;
+                    }
+
+                    const discordID = interaction.user.id;
+                    const guildID = interaction.guild.id;
+                    const beeName = interaction.message.embeds[0].description;
+
+                    _this.logger("discord", guildID, discordID, interaction.customId);
+
+                    const embed = { color: 0xbf0f0f, description: "An unknown error occurred." };
+
+                    switch (interaction.customId) {
+                        // Accept a bee name suggestion
+                        case "bee_name_accept":
+                            const acceptBeeName = await _this.acceptBeeNameSuggestionCall(beeName);
+                            if (acceptBeeName.success === false) {
+                                embed.color = 0xbf0f0f;
+                                embed.description = JSON.stringify(acceptBeeName.error);
+                            } else {
+                                embed.color = 0x65bf65;
+                                embed.description = acceptBeeName.data + " has been accepted.";
+                            }
+                            break;
+
+                        // Reject a bee name suggestion
+                        case "bee_name_reject":
+                            const rejectBeeName = await _this.rejectBeeNameSuggestionCall(beeName);
+                            if (rejectBeeName.success === false) {
+                                embed.color = 0xbf0f0f;
+                                embed.description = JSON.stringify(rejectBeeName.error);
+                            } else {
+                                embed.color = 0x65bf65;
+                                embed.description = rejectBeeName.data + " has been rejected.";
+                            }
+                            break;
+
+                        // Get a new bee name suggestion
+                        case "bee_name_next":
+                            const newBeeName = await _this.getBeeNameSuggestionsCall();
+                            if (newBeeName.success === false) {
+                                embed.color = 0xbf0f0f;
+                                embed.description = JSON.stringify(newBeeName.error);
+                            } else {
+                                embed.color = 0x65bf65;
+                                embed.description = newBeeName.data.join("\n");
+                            }
+                            break;
+
+                        // Default case
+                        default:
+                            embed.color = 0xbf0f0f;
+                            embed.description = "An unknown error occurred.";
+                            break;
+                        }
+
+                    _this.logger("discord", guildID, _this.clientId, embed.description);
+
+                    let buttonRow: ActionRowBuilder<ButtonBuilder> = _this.getButtonComponents();
+
+                    await interaction.editReply({ embeds: [embed], components: [buttonRow] });
+                } else {
+                    console.log(`${interaction.type} event was received but not handled.`);
                 }
             } catch (error) {
                 console.error(error);
