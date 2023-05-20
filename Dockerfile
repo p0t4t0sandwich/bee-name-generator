@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY README.md ./
 
-COPY LICENCE ./
+COPY LICENSE ./
 
 COPY package.json ./
 
