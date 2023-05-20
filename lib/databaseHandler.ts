@@ -1,8 +1,4 @@
-import MUUID from 'uuid-mongodb';
-
-
-import { User } from "./interfaces.js";
-
+import { Db } from "mongodb";
 
 export interface DataBaseResponse<T> {
     success: boolean,
@@ -12,91 +8,151 @@ export interface DataBaseResponse<T> {
 
 
 export class DatabaseHandler {
-    private db: any;
+    private db: Db;
 
-    constructor(db: any) {
+    constructor(db: Db) {
         this.db = db;
     }
 
     // Methods
 
-    async getUserByID(id: string): Promise<DataBaseResponse<User>> {
+    // Get a random bee name from the database
+    async getBeeName(): Promise<DataBaseResponse<string>> {
         try {
-            const user = await this.db.collection("users").findOne({ id });
-            if (user) {
-                return { success: true, data: user };
-            } else {
-                return { success: false, error: "User not found" };
-            }
-        } catch (error) {
-            console.log(error);
-            return { success: false, error: error };
+            // Get a random bee name from the database
+            const query = await this.db.collection("bee_names").aggregate([{ $sample: { size: 1 } }]).toArray();
+            const beeName: string = query[0].name.replace("\\", "").replace(/(\r\n|\n|\r)/gm, "");
+            return { success: true, data: beeName };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
         }
     }
 
-    async getUser(account: string, field: string, value: string): Promise<DataBaseResponse<User>> {
+    // Upload bee name to database
+    async uploadBeeName(beeName: string): Promise<DataBaseResponse<string>> {
         try {
-            const user = await this.db.collection("users").findOne({ [`${account}.${field}`]: value });
-            if (user) {
-                return { success: true, data: user };
-            } else {
-                return { success: false, error: "User not found" };
+            // Check if the name already exists
+            const existsName = await this.db.collection("bee_names").findOne({ name: beeName });
+
+            if (existsName) {
+                return { success: false, error: "Name already exists" };
             }
-        } catch (error) {
-            console.log(error);
-            return { success: false, error: error };
+
+            // Upload bee name to database
+            const query = await this.db.collection("bee_names").insertOne({ name: beeName });
+
+            // Check if bee name was uploaded successfully
+            if (query.acknowledged === false) {
+                return { success: false, error: "Failed to upload bee name" };
+            }
+
+            // Return bee name if successful
+            return { success: true, data: beeName };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
         }
     }
 
-    async updateUser(id: string, data: any): Promise<DataBaseResponse<User>> {
+    // Submit a bee name
+    async submitBeeName(beeName: string): Promise<DataBaseResponse<string>> {
         try {
-            const user = (await this.db.collection("users").findOneAndUpdate({ id }, { $set: data }, { returnOriginal: false })).value;
-            if (user) {
-                return { success: true, data: user };
-            } else {
-                return { success: false, error: "User not found" };
+            // Check if the name already exists
+            const existsName = await this.db.collection("bee_name_suggestions").findOne({ name: beeName });
+
+            if (existsName) {
+                return { success: false, error: "Suggestion already exists" };
             }
-        } catch (error) {
-            console.log(error);
-            return { success: false, error: error };
+
+            const query = await this.db.collection("bee_name_suggestions").insertOne({ name: beeName });
+
+            // Check if bee name was submitted successfully
+            if (query.acknowledged === false) {
+                return { success: false, error: "Failed to submit bee name" };
+            }
+
+            // Return bee name if successful
+            return { success: true, data: beeName };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
         }
     }
 
-    async deleteUser(id: string): Promise<DataBaseResponse<User>> {
+    // Get bee name suggestions
+    async getBeeNameSuggestions(amount: number): Promise<DataBaseResponse<string[]>> {
         try {
-            const user = (await this.db.collection("users").findOneAndDelete({ id })).value;
-            if (user) {
-                return { success: true, data: user };
-            } else {
-                return { success: false, error: "User not found" };
+            // Get bee name suggestions
+            const query = await this.db.collection("bee_name_suggestions").aggregate([{ $sample: { size: amount } }]).toArray();
+
+            // Turn into array of strings
+            const beeNameSuggestions: string[] = [];
+            query.forEach((beeName) => beeNameSuggestions.push(beeName.name));
+
+            // Check if bee name suggestions were found
+            if (beeNameSuggestions.length === 0) {
+                return { success: false, error: "No suggestions found" };
             }
-        } catch (error) {
-            console.log(error);
-            return { success: false, error: error };
+
+            // Return bee name suggestions if successful
+            return { success: true, data: beeNameSuggestions };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
         }
     }
 
-    async createUser(user: any): Promise<DataBaseResponse<User>> {
+    // Accept a bee name suggestion
+    async acceptBeeNameSuggestion(beeName: string): Promise<DataBaseResponse<string>> {
         try {
-            user.id = MUUID.v4().toString();
+            // Check if the name already exists
+            const existsName = await this.db.collection("bee_names").findOne({ name: beeName });
 
-            const newUser = await this.db.collection("users").insertOne(user);
-            if (newUser) {
-
-                let dbresult: DataBaseResponse<User> = await this.getUserByID(user.id);
-                if (dbresult.success === false) {
-                    console.log(dbresult.error);
-                    return { success: false, error: "An error occurred while creating your account" };
-                }
-
-                return { success: true, data: dbresult.data };
-
-            } else {
-                return { success: false, error: "User not found" };
+            if (existsName) {
+                return { success: false, error: "Name already exists" };
             }
-        } catch (error) {
-            console.log(error);
-            return { success: false, error: error };
+
+            // Upload bee name to database
+            const uploadQuery = await this.db.collection("bee_names").insertOne({ name: beeName });
+
+            // Check if bee name was uploaded successfully
+            if (uploadQuery.acknowledged === false) {
+                return { success: false, error: "Failed to upload bee name" };
+            }
+
+            // Delete bee name suggestion
+            const deleteQuery = await this.db.collection("bee_name_suggestions").deleteOne({ name: beeName });
+
+            // Check if bee name suggestion was deleted successfully
+            if (deleteQuery.acknowledged === false) {
+                return { success: false, error: "Failed to delete bee name suggestion" };
+            }
+
+            // Return bee name if successful
+            return { success: true, data: beeName };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
+        }
+    }
+
+    // Reject a bee name suggestion
+    async rejectBeeNameSuggestion(beeName: string): Promise<DataBaseResponse<string>> {
+        try {
+            // Delete bee name suggestion
+            const deleteQuery = await this.db.collection("bee_name_suggestions").deleteOne({ name: beeName });
+
+            // Check if bee name suggestion was deleted successfully
+            if (deleteQuery.acknowledged === false) {
+                return { success: false, error: "Failed to delete bee name suggestion" };
+            }
+
+            // Return bee name if successful
+            return { success: true, data: beeName };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
         }
     }
 }

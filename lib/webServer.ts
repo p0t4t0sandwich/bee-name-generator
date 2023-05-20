@@ -1,20 +1,23 @@
-import express, { Express, Router } from "express";
-import fs from "fs";
+import bodyParser from "body-parser";
+import express, { Router } from "express";
 import { Db } from "mongodb";
 
 
 import { DatabaseHandler } from "./databaseHandler.js";
-import bodyParser from "body-parser";
+
+
+const DOMAIN: string = <string>process.env.DOMAIN || "http://localhost:3001";
+const ROOT_ENDPOINT: string = <string>process.env.ROOT_ENDPOINT || "/api/v1/bee-name";
+const AUTH_TOKEN: string = <string>process.env.AUTH_TOKEN || "1234567890";
 
 
 export class WebServer {
     // Properties
-    private port: number;
-    private db: DatabaseHandler
+    private port: number = <number><unknown>process.env.PORT || 3001;
+    private db: DatabaseHandler;
 
     // Constructor
-    constructor(port: number, mongo: Db) {
-        this.port = port;
+    constructor(mongo: Db) {
         this.db = new DatabaseHandler(mongo);
     }
 
@@ -25,7 +28,42 @@ export class WebServer {
         try {
             res.type("text/html")
                 .status(200)
-                .send(fs.promises.readFile("./public/index.html", "utf-8"));
+                .send(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Bee Name Generator</title>
+                    <style>
+                        body {
+                            font-family: Arial, Helvetica, sans-serif;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Bee Name Generator</h1>
+                    <p>Get a bee name: </p>
+                    <a href="${DOMAIN}${ROOT_ENDPOINT}/name">GET ${DOMAIN}${ROOT_ENDPOINT}/name</a>
+                    <br>
+                    <p>Upload a bee name (Authentication Required): </p>
+                    <a href="${DOMAIN}${ROOT_ENDPOINT}/name">POST ${DOMAIN}${ROOT_ENDPOINT}/name</a>
+                    <br>
+                    <p>Submit a bee name: </p>
+                    <form action="${DOMAIN}${ROOT_ENDPOINT}/submit" method="post">
+                        <input type="text" name="name" placeholder="Bee Name">
+                        <input type="submit" value="Submit">
+                    </form>
+                    <p>Get bee name suggestions (Authentication Required): </p>
+                    <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">GET ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
+                    <br>
+                    <p>Accept a bee name suggestion (Authentication Required): </p>
+                    <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">POST ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
+                    <br>
+                    <p>Reject a bee name suggestion: </p>
+                    <a href="${DOMAIN}${ROOT_ENDPOINT}/suggestion">DELETE ${DOMAIN}${ROOT_ENDPOINT}/suggestion</a>
+                </body>
+                </html>
+                `);
 
         // Serverside error response
         } catch (err) {
@@ -36,6 +74,235 @@ export class WebServer {
         }
     }
 
+    // Get a bee name
+    async getBeeNameRoute(req, res, next): Promise<void> {
+        try {
+            // Get a random bee name from the database
+            const beeName = await this.db.getBeeName();
+            if (beeName.success) {
+                res.type("application/json")
+                    .status(200)
+                    .json({ "name": beeName.data });
+            } else {
+                res.type("application/json")
+                    .status(500)
+                    .json({ "message": "Internal Server Error", "error": beeName.error });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    // Upload a bee name (authenticated)
+    async uploadBeeNameRoute(req, res, next): Promise<void> {
+        try { 
+            // Check if request is authenticated
+            if (req.headers.authorization === AUTH_TOKEN) {
+                // Check if request body is valid
+                if (req.body.name) {
+                    // Upload bee name to database
+                    const beeName = await this.db.uploadBeeName(req.body.name);
+                    if (beeName.success) {
+                        res.type("application/json")
+                            .status(200)
+                            .json({ "name": beeName.data });
+
+                    // Failed to upload bee name
+                    } else {
+                        res.type("application/json")
+                            .status(500)
+                            .json({ "message": "Internal Server Error", "error": beeName.error });
+                    }
+
+                // Invalid request body
+                } else {
+                    res.type("application/json")
+                        .status(400)
+                        .json({ "message": "Bad Request", "error": "Request body is invalid" });
+                }
+
+            // Unauthorized request
+            } else {
+                res.type("application/json")
+                    .status(401)
+                    .json({ "message": "Unauthorized", "error": "Request is not authenticated" });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    async submitBeeNameRoute(req, res, next): Promise<void> {
+        try {
+            // Check if request body is valid
+            const beeName = req.params.name || req.body.name;
+            if (beeName) {
+                // Upload bee name to database
+                const response = await this.db.submitBeeName(beeName);
+
+                // Check if bee name was uploaded successfully
+                if (response.success) {
+                    res.type("application/json")
+                        .status(200)
+                        .json({ "name": response.data });
+
+                // Failed to upload bee name
+                } else {
+                    res.type("application/json")
+                        .status(500)
+                        .json({ "message": "Internal Server Error", "error": response.error });
+                }
+
+            // Invalid request body
+            } else {
+                res.type("application/json")
+                    .status(400)
+                    .json({ "message": "Bad Request", "error": "Request body is invalid" });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    // Get bee name suggestions
+    async getBeeNameSuggestionsRoute(req, res, next): Promise<void> {
+        try {
+            // Check if request is authenticated
+            if (req.headers.authorization === AUTH_TOKEN) {
+                // Check if request body is valid
+                const amount: number = req.params.amount || req.body.amount || 1;
+
+                // Get bee name suggestions from database
+                const beeNameSuggestions = await this.db.getBeeNameSuggestions(amount);
+                if (beeNameSuggestions.success) {
+                    res.type("application/json")
+                        .status(200)
+                        .json({ "names": beeNameSuggestions.data });
+
+                // Failed to get bee name suggestions
+                } else {
+                    res.type("application/json")
+                        .status(500)
+                        .json({ "message": "Internal Server Error", "error": beeNameSuggestions.error });
+                }
+
+            // Unauthorized request
+            } else {
+                res.type("application/json")
+                    .status(401)
+                    .json({ "message": "Unauthorized", "error": "Request is not authenticated" });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    // Accept a bee name suggestion
+    async acceptBeeNameSuggestionRoute(req, res, next): Promise<void> {
+        try {
+            // Check if request is authenticated
+            if (req.headers.authorization === AUTH_TOKEN) {
+                // Check if request body is valid
+                const beeName: string = req.params.name || req.body.name;
+                if (beeName) {
+                    // Upload bee name to database
+                    const response = await this.db.acceptBeeNameSuggestion(beeName);
+
+                    // Check if bee name was uploaded successfully
+                    if (response.success) {
+                        res.type("application/json")
+                            .status(200)
+                            .json({ "name": response.data });
+
+                    // Failed to accept bee name
+                    } else {
+                        res.type("application/json")
+                            .status(500)
+                            .json({ "message": "Internal Server Error", "error": response.error });
+                    }
+
+                // Invalid request body
+                } else {
+                    res.type("application/json")
+                        .status(400)
+                        .json({ "message": "Bad Request", "error": "Request body is invalid" });
+                }
+
+            // Unauthorized request
+            } else {
+                res.type("application/json")
+                    .status(401)
+                    .json({ "message": "Unauthorized", "error": "Request is not authenticated" });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    // Reject a bee name suggestion
+    async rejectBeeNameSuggestionRoute(req, res, next): Promise<void> {
+        try {
+            // Check if request body is valid
+            const beeName: string = req.params.name || req.body.name;
+            if (beeName) {
+                // Upload bee name to database
+                const response = await this.db.rejectBeeNameSuggestion(beeName);
+
+                // Check if bee name was uploaded successfully
+                if (response.success) {
+                    res.type("application/json")
+                        .status(200)
+                        .json({ "name": response.data });
+
+                // Failed to reject bee name
+                } else {
+                    res.type("application/json")
+                        .status(500)
+                        .json({ "message": "Internal Server Error", "error": response.error });
+                }
+
+            // Invalid request body
+            } else {
+                res.type("application/json")
+                    .status(400)
+                    .json({ "message": "Bad Request", "error": "Request body is invalid" });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    // Start webserver
     async start(): Promise<void> {
         // Configure REST API/Webserver
         const app = express();
@@ -45,6 +312,33 @@ export class WebServer {
         app.use("", router);
 
         // Default route
-        router.get("/", defaultRoute);
+        router.get("/", this.defaultRoute.bind(this));
+
+        // Get a bee name
+        router.get("/name", this.getBeeNameRoute.bind(this));
+
+        // Upload a bee name
+        router.post("/name", this.uploadBeeNameRoute.bind(this));
+
+        // Submit a bee name
+        router.post("/submit", this.submitBeeNameRoute.bind(this));
+        router.post("/submit/:name", this.submitBeeNameRoute.bind(this));
+
+        // Get bee name suggestions
+        router.get("/suggestion", this.getBeeNameSuggestionsRoute.bind(this));
+        router.get("/suggestion/:amount", this.getBeeNameSuggestionsRoute.bind(this));
+
+        // Accept a bee name suggestion
+        router.post("/suggestion", this.acceptBeeNameSuggestionRoute.bind(this));
+        router.post("/suggestion/:name", this.acceptBeeNameSuggestionRoute.bind(this));
+
+        // Reject a bee name suggestion
+        router.delete("/suggestion", this.rejectBeeNameSuggestionRoute.bind(this));
+        router.delete("/suggestion/:name", this.rejectBeeNameSuggestionRoute.bind(this));
+
+        // Start webserver
+        app.listen(this.port, () => {
+            console.log(`Webserver started on port ${this.port}`);
+        });
     }
 }
