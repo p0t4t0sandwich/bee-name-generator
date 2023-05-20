@@ -104,7 +104,9 @@ export class WebServer {
             // Check if request is authenticated
             if (req.headers.authorization === AUTH_TOKEN) {
                 // Check if request body is valid
-                if (req.body.name) {
+                const beeName: string = req.params.name || req.body.name;
+
+                if (beeName) {
                     // Upload bee name to database
                     const beeName = await this.db.uploadBeeName(req.body.name);
                     if (beeName.success) {
@@ -113,6 +115,52 @@ export class WebServer {
                             .json({ "name": beeName.data });
 
                     // Failed to upload bee name
+                    } else {
+                        res.type("application/json")
+                            .status(500)
+                            .json({ "message": "Internal Server Error", "error": beeName.error });
+                    }
+
+                // Invalid request body
+                } else {
+                    res.type("application/json")
+                        .status(400)
+                        .json({ "message": "Bad Request", "error": "Request body is invalid" });
+                }
+
+            // Unauthorized request
+            } else {
+                res.type("application/json")
+                    .status(401)
+                    .json({ "message": "Unauthorized", "error": "Request is not authenticated" });
+            }
+
+        // Serverside error response
+        } catch (err) {
+            console.log(err);
+            res.type("application/json")
+                .status(500)
+                .json({ "message": "Internal Server Error", "error": err });
+        }
+    }
+
+    // Delete a bee name (authenticated)
+    async deleteBeeNameRoute(req, res, next): Promise<void> {
+        try {
+            // Check if request is authenticated
+            if (req.headers.authorization === AUTH_TOKEN) {
+                // Check if request body is valid
+                const beeName: string = req.params.name || req.body.name;
+
+                if (beeName) {
+                    // Delete bee name from database
+                    const beeName = await this.db.deleteBeeName(req.body.name);
+                    if (beeName.success) {
+                        res.type("application/json")
+                            .status(200)
+                            .json({ "name": beeName.data });
+
+                    // Failed to delete bee name
                     } else {
                         res.type("application/json")
                             .status(500)
@@ -319,6 +367,11 @@ export class WebServer {
 
         // Upload a bee name
         router.post("/name", this.uploadBeeNameRoute.bind(this));
+        router.post("/name/:name", this.uploadBeeNameRoute.bind(this));
+
+        // Delete a bee name
+        router.delete("/name", this.deleteBeeNameRoute.bind(this));
+        router.delete("/name/:name", this.deleteBeeNameRoute.bind(this));
 
         // Submit a bee name
         router.post("/submit", this.submitBeeNameRoute.bind(this));

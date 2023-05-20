@@ -55,6 +55,25 @@ export class DatabaseHandler {
         }
     }
 
+    // Delete bee name from database
+    async deleteBeeName(beeName: string): Promise<DataBaseResponse<string>> {
+        try {
+            // Delete bee name from database
+            const query = await this.db.collection("bee_names").deleteOne({ name: beeName });
+
+            // Check if bee name was deleted successfully
+            if (query.acknowledged === false) {
+                return { success: false, error: "Failed to delete bee name" };
+            }
+
+            // Return bee name if successful
+            return { success: true, data: beeName };
+        } catch (err) {
+            console.log(err);
+            return { success: false, error: err };
+        }
+    }
+
     // Submit a bee name
     async submitBeeName(beeName: string): Promise<DataBaseResponse<string>> {
         try {
