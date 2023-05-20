@@ -8,5 +8,5 @@ const webServer: WebServer = new WebServer(mongo);
 await webServer.start();
 
 // Discord Bot
-// const discordBot: DiscordBot = new DiscordBot(mongo);
-// await discordBot.start();
+const discordBot: DiscordBot = new DiscordBot();
+await discordBot.start();
