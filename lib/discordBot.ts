@@ -113,7 +113,7 @@ export class DiscordBot {
     async submitBeeNameSuggestionCall(beeName: string): Promise<BeeAPIResponse<string>> {
         try {
             // Submit the bee name suggestion
-            const response = await fetch(`${DOMAIN}${ROOT_ENDPOINT}/submit`, {
+            const response = await fetch(`${DOMAIN}${ROOT_ENDPOINT}/suggestion`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
