@@ -58,8 +58,9 @@ export class WebServer {
                     <p>Upload a bee name (Authentication Required): </p>
                     <a href="${DOMAIN}${ROOT_ENDPOINT}/name">POST ${DOMAIN}${ROOT_ENDPOINT}/name</a>
                     <br>
+                    <iframe name="dummyframe" id="dummyframe" style="display: none;"></iframe>
                     <p>Submit a bee name (it can make sense, or you can be punny with it): </p>
-                    <form action="${DOMAIN}${ROOT_ENDPOINT}/suggestion" method="post">
+                    <form action="${DOMAIN}${ROOT_ENDPOINT}/suggestion" method="post" target="dummyframe">
                         <input type="text" name="name" placeholder="Bee Name">
                         <input type="submit" value="Submit">
                     </form>
