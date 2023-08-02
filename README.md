@@ -79,7 +79,7 @@ JSON response:
   }
   ```
 
-### Get bee name suggestions
+### Get bee name suggestions (Authentication Required)
 
 URL encoded query parameters:
 
@@ -107,7 +107,7 @@ JSON response:
 }
 ```
 
-### Accept a bee name suggestion
+### Accept a bee name suggestion (Authentication Required)
 
 URL encoded query parameters:
 
@@ -131,7 +131,7 @@ JSON response:
   }
   ```
 
-### Reject a bee name suggestion
+### Reject a bee name suggestion (Authentication Required)
 
 URL encoded query parameters:
 
