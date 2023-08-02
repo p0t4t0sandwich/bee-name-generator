@@ -6,7 +6,7 @@ A bee-themed name generator for various uses.
 
 ## Discord Bot Usage
 
-### Command List (markdown table)
+### Command List
 
 | Command | Description | Parameters | Admin Only |
 | --- | --- | --- | --- |

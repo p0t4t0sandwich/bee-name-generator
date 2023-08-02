@@ -111,9 +111,9 @@ export class WebServer {
 
     // Upload a bee name (authenticated)
     async uploadBeeNameRoute(req, res, next): Promise<void> {
-        try { 
+        try {
             // Check if request is authenticated
-            if (req.headers.authorization === AUTH_TOKEN) {
+            if (req.headers.authorization === "Bearer " + AUTH_TOKEN) {
                 // Check if request body is valid
                 const beeName: string = req.params.name || req.body.name;
 
@@ -159,7 +159,7 @@ export class WebServer {
     async deleteBeeNameRoute(req, res, next): Promise<void> {
         try {
             // Check if request is authenticated
-            if (req.headers.authorization === AUTH_TOKEN) {
+            if (req.headers.authorization === "Bearer " + AUTH_TOKEN) {
                 // Check if request body is valid
                 const beeName: string = req.params.name || req.body.name;
 
@@ -242,7 +242,7 @@ export class WebServer {
     async getBeeNameSuggestionsRoute(req, res, next): Promise<void> {
         try {
             // Check if request is authenticated
-            if (req.headers.authorization === AUTH_TOKEN) {
+            if (req.headers.authorization === "Bearer " + AUTH_TOKEN) {
                 // Check if request body is valid
                 const amount: number = req.params.amount || req.body.amount || 1;
 
@@ -280,7 +280,7 @@ export class WebServer {
     async acceptBeeNameSuggestionRoute(req, res, next): Promise<void> {
         try {
             // Check if request is authenticated
-            if (req.headers.authorization === AUTH_TOKEN) {
+            if (req.headers.authorization === "Bearer " + AUTH_TOKEN) {
                 // Check if request body is valid
                 const beeName: string = req.params.name || req.body.name;
                 if (beeName) {

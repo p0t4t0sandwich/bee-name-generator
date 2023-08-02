@@ -63,7 +63,7 @@ export class DiscordBot {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": AUTH_TOKEN,
+                    "Authorization": "Bearer " + AUTH_TOKEN,
                 },
                 body: JSON.stringify({ name: beeName }),
             });
@@ -90,7 +90,7 @@ export class DiscordBot {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": AUTH_TOKEN,
+                    "Authorization": "Bearer " + AUTH_TOKEN,
                 },
                 body: JSON.stringify({ name: beeName }),
             });
@@ -143,7 +143,7 @@ export class DiscordBot {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": AUTH_TOKEN,
+                    "Authorization": "Bearer " + AUTH_TOKEN,
                 }
             });
             const data = await response.json();
@@ -169,7 +169,7 @@ export class DiscordBot {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": AUTH_TOKEN,
+                    "Authorization": "Bearer " + AUTH_TOKEN,
                 },
                 body: JSON.stringify({ name: beeName }),
             });
@@ -196,7 +196,7 @@ export class DiscordBot {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": AUTH_TOKEN,
+                    "Authorization": "Bearer " + AUTH_TOKEN,
                 },
                 body: JSON.stringify({ name: beeName }),
             });
