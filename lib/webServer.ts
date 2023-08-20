@@ -4,6 +4,7 @@ import { Db } from "mongodb";
 
 
 import { DatabaseHandler } from "./databaseHandler.js";
+import { DiscordBot } from "./discordBot.js";
 
 function generateToken(): string {
     const chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -211,6 +212,9 @@ export class WebServer {
 
                 // Check if bee name was uploaded successfully
                 if (response.success) {
+                    // Send a message to the configured Discord channel
+                    DiscordBot.sendMessage(`New bee name suggestion: ${beeName}`);
+
                     res.type("application/json")
                         .status(200)
                         .json({ "name": response.data });

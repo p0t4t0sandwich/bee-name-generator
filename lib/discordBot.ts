@@ -1,10 +1,11 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, Collection, ComponentBuilder, Events, GatewayIntentBits, Message, REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Channel, Client, Collection, ComponentBuilder, Events, GatewayIntentBits, Message, REST, Routes, SlashCommandBuilder, TextChannel } from 'discord.js';
 
 
 import { DOMAIN, ROOT_ENDPOINT, AUTH_TOKEN } from "./webServer.js";
 const DISCORD_ADMIN_IDS: string[] = process.env.DISCORD_ADMIN_IDS.split(",");
+const DISCORD_GUILD_ID: string = process.env.DISCORD_GUILD_ID;
+const DISCORD_CHANNEL_ID: string = process.env.DISCORD_CHANNEL_ID;
 import commandLocales from '../localization/commands.json' assert { type: "json" };
-
 
 interface BeeAPIResponse<T> {
     success: boolean,
@@ -12,11 +13,17 @@ interface BeeAPIResponse<T> {
     error?: any
 }
 
+// Custom client type
+interface CustomClient extends Client {
+    commands: Collection<string, any>;
+}
+
 
 export class DiscordBot {
     // Properties
     private token: string;
     private clientId: string;
+    private static client: CustomClient;
 
     // Constructor
     constructor() {
@@ -236,6 +243,23 @@ export class DiscordBot {
         return buttonRow;
     }
 
+    // Send a message to the Discord channel
+    static async sendMessage(message: string): Promise<void> {
+        try {
+            const channel: Channel = await this.client.channels.fetch(DISCORD_CHANNEL_ID);
+            if (channel.isTextBased()) {
+                const embed = {
+                    color: 0xe8a917,
+                    title: "Bee Name Generator Suggestion",
+                    description: message
+                };
+
+                await channel.send({ embeds: [embed] });
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
 
     async start() {
         const _this = this;
@@ -428,23 +452,18 @@ export class DiscordBot {
             }
         };
 
-        // Custom client type
-        interface CustomClient extends Client {
-            commands: Collection<string, any>;
-        }
-
-        const client: CustomClient = <CustomClient>(new Client({ intents: [GatewayIntentBits.Guilds] }));
+        DiscordBot.client = <CustomClient>(new Client({ intents: [GatewayIntentBits.Guilds] }));
 
         // Set up slash commands
         const commands = [];
-        client.commands = new Collection();
-        client.commands.set(bee_name_command.data.name, bee_name_command);
+        DiscordBot.client.commands = new Collection();
+        DiscordBot.client.commands.set(bee_name_command.data.name, bee_name_command);
         commands.push(bee_name_command.data.toJSON());
 
         const rest = new REST({ version: '10' }).setToken(this.token);
 
         // Handle events
-        client.on(Events.InteractionCreate, async interaction => {
+        DiscordBot.client.on(Events.InteractionCreate, async interaction => {
             try {
                 // Handle slash commands
                 if (interaction.isChatInputCommand()) {
@@ -540,7 +559,7 @@ export class DiscordBot {
             }
         });
 
-        client.once(Events.ClientReady, c => {
+        DiscordBot.client.once(Events.ClientReady, c => {
             console.log(`Ready! Logged in as ${c.user.tag}`);
 
             (async () => {
@@ -559,6 +578,6 @@ export class DiscordBot {
             })();
         });
 
-        client.login(this.token);
+        DiscordBot.client.login(this.token);
     }
 }

@@ -9,6 +9,8 @@ services:
       - DISCORD_TOKEN=           # Discord bot token
       - DISCORD_CLIENT_ID=       # Used to update slash commands
       - DISCORD_ADMIN_IDS=       # Comma separated list of admin ids
+      - DISCORD_GUILD_ID=        # Guild id to send logs to
+      - DISCORD_CHANNEL_ID=      # Channel id to send logs to
       - REST_PORT=               # Port to listen on
       - MONGODB_URI=             # MongoDB connection string
       - MONGODB_DB=              # MongoDB database name
